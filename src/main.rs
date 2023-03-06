@@ -73,16 +73,41 @@ fn handle_client(mut stream: TcpStream) {
     let method = request.split_whitespace().next().unwrap();
     //get the request path
     //handle arguments
-    let args = request.split_whitespace().nth(1).unwrap().split("?").nth(1);
-    //create an hashmap to store the arguments
     let mut arguments = HashMap::new();
-    if args.is_some() {
-        let args = args.unwrap();
-        for arg in args.split("&") {
-            let arg = arg.split("=").collect::<Vec<&str>>();
-            arguments.insert(arg[0].to_string(), arg[1].to_string());
+
+    if method == "GET" {
+
+        let args = request.split_whitespace().nth(1).unwrap().split("?").nth(1);
+        //create an hashmap to store the arguments
+        if args.is_some() {
+            let args = args.unwrap();
+            for arg in args.split("&") {
+                let arg = arg.split("=").collect::<Vec<&str>>();
+                arguments.insert(arg[0].to_string(), arg[1].to_string());
+            }
+            
         }
-        
+    } else if method == "POST" {
+        let args = request.split("\r\n\r\n").nth(1).unwrap();
+        //create an hashmap to store the arguments
+        if args.len() > 0 {
+            let args = args;
+            println!("{}", args);
+            for arg in args.split("\n") {
+                let arg = arg.split("=").collect::<Vec<&str>>();
+                if arg.len() < 2 { // Vérifiez que la longueur est supérieure ou égale à 2
+                    continue;
+                }
+                //check if the argument is empty
+                if arg[1].len() < 1 {
+                    continue;
+                }
+                
+                arguments.insert(arg[0].to_string(), arg[1].to_string());
+            }
+            
+        }
+
     }
     println!("{:?}", arguments);
     let path = request.split_whitespace().nth(1).unwrap().split("?").next().unwrap();
