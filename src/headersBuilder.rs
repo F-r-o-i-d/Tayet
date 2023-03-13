@@ -48,19 +48,27 @@ impl headersBuilder {
 
     pub fn build(&mut self) -> String {
         let mut headers = String::new();
+        let mut finalHeaders = String::new();
         if !self.check_integrity() {
             //make an error and stop the program
             panic!("Headers miss some important headers");
         }
-        let httpHeader = self.headers.get("HTTP/1.1").unwrap();
-        headers.push_str(&format!("{} {}\r\n", "HTTP/1.1", httpHeader));
+        //add http version header and status code
+        let mut headersVersion = String::new();
         for (key, value) in &self.headers {
-            if key == "HTTP/1.1" {
+            if (key.starts_with("HTTP/")) {
+                headersVersion = format!("{} {}\r\n", key, value);
+                break;
+            }
+        }
+        finalHeaders.push_str(&headersVersion);
+        for (key, value) in &self.headers {
+            if (key.starts_with("HTTP/")) {
                 continue;
             }
-            headers.push_str(&format!("{}: {}\r\n", key, value));
+            finalHeaders.push_str(&format!("{}: {}\r\n", key, value));
         }
-        headers.push_str("\r\n");
-        return headers;
+        finalHeaders.push_str("\r\n");
+        return finalHeaders;
     }
 }

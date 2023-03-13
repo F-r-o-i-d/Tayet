@@ -2,6 +2,7 @@ mod firewall;
 mod parser;
 mod headersBuilder;
 mod crosslanguageHandler;
+mod encoder;
 //import socket
 use std::net::TcpListener;
 //import thread
@@ -73,16 +74,41 @@ fn handle_client(mut stream: TcpStream) {
     let method = request.split_whitespace().next().unwrap();
     //get the request path
     //handle arguments
-    let args = request.split_whitespace().nth(1).unwrap().split("?").nth(1);
-    //create an hashmap to store the arguments
     let mut arguments = HashMap::new();
-    if args.is_some() {
-        let args = args.unwrap();
-        for arg in args.split("&") {
-            let arg = arg.split("=").collect::<Vec<&str>>();
-            arguments.insert(arg[0].to_string(), arg[1].to_string());
+
+    if method == "GET" {
+
+        let args = request.split_whitespace().nth(1).unwrap().split("?").nth(1);
+        //create an hashmap to store the arguments
+        if args.is_some() {
+            let args = args.unwrap();
+            for arg in args.split("&") {
+                let arg = arg.split("=").collect::<Vec<&str>>();
+                arguments.insert(encoder::http_decode(arg[0]), encoder::http_decode(arg[1]));
+            }
+            
         }
-        
+    } else if method == "POST" {
+        let args = request.split("\r\n\r\n").nth(1).unwrap();
+        //create an hashmap to store the arguments
+        if args.len() > 0 {
+            let args = args;
+            println!("{}", args);
+            for arg in args.split("\n") {
+                let arg = arg.split("=").collect::<Vec<&str>>();
+                if arg.len() < 2 { // Vérifiez que la longueur est supérieure ou égale à 2
+                    continue;
+                }
+                //check if the argument is empty
+                if arg[1].len() < 1 {
+                    continue;
+                }
+                
+                arguments.insert(encoder::http_decode(arg[0]), encoder::http_decode(arg[1]));
+            }
+            
+        }
+
     }
     println!("{:?}", arguments);
     let path = request.split_whitespace().nth(1).unwrap().split("?").next().unwrap();
@@ -117,6 +143,7 @@ fn handle_client(mut stream: TcpStream) {
             .read_to_string(&mut contents)
             .expect("something went wrong reading the file");
         //create a response
+
         headers.add_header("HTTP/1.1", "403 Forbidden".to_string());
         headers.add_header("Content-Length", contents.len().to_string());
         headers.add_header("Server", serverName.to_string());
